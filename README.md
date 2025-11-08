@@ -16,72 +16,102 @@ This project maintains a list of domains that have chosen to block, restrict, or
 
 Unlike traditional DNS blocklists, this project is designed for **VPN routing**. When a domain on this list is accessed, your router will automatically route that traffic through a VPN connection, bypassing UK geo-restrictions.
 
-## 📦 Available Formats
+## 📦 Auto-Update Scripts
 
-All formats are automatically generated from the source domains list:
+The source domain list is maintained at `domains/uk-blocking-hosts.txt`. Auto-update scripts are available that run on your router and keep the list current:
 
-- **Domains** (`domains/uk-blocking-hosts.txt`) - Plain domain list (source file)
-- **ControlD** (`controld/uk-blocking-hosts.txt`) - ControlD Custom Rules format
-- **MikroTik** (`mikrotik/uk-blocking-hosts.rsc`) - RouterOS script for address-lists
-- **UniFi/VyOS** (`unifi/uk-blocking-hosts.sh`) - VyOS script for USG domain-groups
+- **Source** (`domains/uk-blocking-hosts.txt`) - Plain domain list (can be used directly)
+- **Auto-Update Scripts** (`scripts/`) - Scripts that run on routers to auto-update
+  - `mikrotik-update.rsc` - MikroTik RouterOS auto-update script
+  - `unifi-update.sh` - UniFi/VyOS/EdgeOS auto-update script
 
 ## 🔗 Usage
 
-### Direct Links
+### MikroTik RouterOS
 
-Choose the format that matches your platform:
+**Quick Setup:**
+1. Download [`mikrotik-update.rsc`](https://raw.githubusercontent.com/the-Jamz/dns-censored/main/scripts/mikrotik-update.rsc)
+2. Upload to your router (Files > Upload in Winbox)
+3. Import: `/import file=mikrotik-update.rsc`
+4. Schedule daily updates at 3 AM:
+   ```
+   /system scheduler add name="uk-blocking-hosts-daily" \
+       start-date=[/system clock get date] \
+       start-time=03:00:00 \
+       interval=1d \
+       on-event="uk-blocking-hosts-update"
+   ```
+5. Run manually: `/system script run uk-blocking-hosts-update`
 
+**Configure Routing:**
+After the script runs, configure your firewall mangle and routing:
 ```
-# Plain domains list (source)
+/ip firewall mangle add chain=prerouting dst-address-list=uk-blocked \
+    action=mark-routing new-routing-mark=vpn-route passthrough=yes
+
+/ip route add routing-mark=vpn-route gateway=<your-vpn-gateway>
+```
+
+**Customization:**
+Edit line 20 in the script to change the address-list name from `uk-blocked` to your preferred name.
+
+---
+
+### UniFi/VyOS/EdgeOS
+
+**Quick Setup:**
+1. Download [`unifi-update.sh`](https://raw.githubusercontent.com/the-Jamz/dns-censored/main/scripts/unifi-update.sh)
+2. Copy to router: `scp unifi-update.sh user@router:/config/scripts/`
+3. Make executable: `ssh user@router chmod +x /config/scripts/unifi-update.sh`
+4. Test: `ssh user@router sudo /config/scripts/unifi-update.sh`
+5. Schedule via cron (daily at 3 AM):
+   ```bash
+   # SSH to router and edit crontab
+   crontab -e
+
+   # Add this line:
+   0 3 * * * /config/scripts/unifi-update.sh >> /var/log/uk-blocking-update.log 2>&1
+   ```
+
+**Configure Routing:**
+```bash
+configure
+set policy route VPN_ROUTE rule 10 destination group domain-group UK_BLOCKED
+set policy route VPN_ROUTE rule 10 set table 1
+set protocols static table 1 route 0.0.0.0/0 next-hop <vpn-gateway-ip>
+commit
+save
+```
+
+**Customization:**
+Pass a custom domain-group name: `/config/scripts/unifi-update.sh MY_CUSTOM_GROUP`
+
+---
+
+### ControlD
+
+**Direct URL Method:**
+Simply add this URL to your ControlD Custom Rules:
+```
 https://raw.githubusercontent.com/the-Jamz/dns-censored/main/domains/uk-blocking-hosts.txt
-
-# ControlD format
-https://raw.githubusercontent.com/the-Jamz/dns-censored/main/controld/uk-blocking-hosts.txt
-
-# MikroTik RouterOS script
-https://raw.githubusercontent.com/the-Jamz/dns-censored/main/mikrotik/uk-blocking-hosts.rsc
-
-# UniFi/VyOS script
-https://raw.githubusercontent.com/the-Jamz/dns-censored/main/unifi/uk-blocking-hosts.sh
 ```
 
-### Platform-Specific Instructions
+ControlD will automatically fetch updates.
 
-#### ControlD
-
+**Manual Import:**
 1. Go to ControlD Dashboard > Filters > Custom Rules
 2. Create a new folder (e.g., "UK Blocked")
-3. Import the ControlD format file or copy domains
-4. Set action to **REDIRECT** to route through a specific resolver/VPN endpoint
+3. Import using the URL above or paste domains manually
+4. Set action to **REDIRECT** to route through your VPN endpoint
 
-#### MikroTik RouterOS
+---
 
-1. Download the `.rsc` file or copy the script contents
-2. Import via terminal or paste commands directly:
-   ```
-   /import uk-blocking-hosts.rsc
-   ```
-3. Create a mangle rule to mark routing:
-   ```
-   /ip firewall mangle add chain=prerouting dst-address-list=uk-blocked \
-     action=mark-routing new-routing-mark=vpn-route passthrough=yes
-   ```
-4. Add a route using the VPN gateway with the routing mark
+### Direct Domain List
 
-#### UniFi Security Gateway (USG)
-
-1. SSH into your USG
-2. Copy and paste the script contents or run:
-   ```bash
-   curl -s https://raw.githubusercontent.com/the-Jamz/dns-censored/main/unifi/uk-blocking-hosts.sh | bash
-   ```
-3. Configure policy routing to use the domain-group:
-   ```
-   set policy route VPN_ROUTE rule 10 destination group domain-group UK_BLOCKED
-   set policy route VPN_ROUTE rule 10 set table 1
-   ```
-
-**Note**: USG configurations may be overwritten by the controller. Consider using `config.gateway.json` for persistent configuration.
+Access the raw list directly:
+```
+https://raw.githubusercontent.com/the-Jamz/dns-censored/main/domains/uk-blocking-hosts.txt
+```
 
 ## 📝 Contributing
 
@@ -98,11 +128,11 @@ We welcome contributions! If you've discovered a site blocking UK users:
    - Note whether it's a complete block or partial restriction
 
 3. **Pull requests:**
-   - Add domains to `domains/uk-blocking-hosts.txt` (the source file only)
+   - Add domains to `domains/uk-blocking-hosts.txt` only
    - Group domains by service with a comment header (e.g., `# Reddit`)
    - Include both the base domain and www subdomain if applicable
    - Update the entry count in the header
-   - Commit only the source file (formats are auto-generated by CI/CD)
+   - The domain list is validated automatically by CI
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
@@ -133,27 +163,20 @@ This list is provided for informational and transparency purposes. Inclusion on 
 
 **Legal Note**: Users are responsible for ensuring their use of VPN routing complies with applicable laws and service terms of service.
 
-## 🛠️ Building
+## 🛠️ How Auto-Updates Work
+
+**For Users:**
+
+The auto-update scripts run on your router and automatically:
+1. Download the latest domain list from GitHub
+2. Update your address-list (MikroTik) or domain-group (UniFi/VyOS)
+3. Log the results
+
+You can schedule them to run daily (or any interval) so your router always has the latest blocked domains.
 
 **For Contributors:**
 
-The platform-specific formats (`controld/`, `mikrotik/`, `unifi/`) are **automatically generated by GitHub Actions** and should not be manually edited or committed.
-
-**Workflow:**
-1. Edit only `domains/uk-blocking-hosts.txt`
-2. Commit and push your changes
-3. GitHub Actions automatically builds and commits the platform-specific formats
-4. The generated formats are published to the repository
-
-**Local Testing:**
-
-To test format generation locally before committing:
-
-```bash
-python3 build.py
-```
-
-This generates the formats in their respective directories, but **do not commit these files** - they are in `.gitignore` and will be auto-generated by CI/CD.
+Simply edit `domains/uk-blocking-hosts.txt` and submit a pull request. The domain list is validated automatically by GitHub Actions. Users' routers will automatically pull the updates on their next scheduled run.
 
 ## 🤝 Credits
 
@@ -170,8 +193,9 @@ We are grateful to HaGeZi for pioneering this comprehensive approach to DNS bloc
 
 - **Current entries:** 4 domains
 - **Last updated:** 2025-11-08
-- **Formats available:** 4 (domains, ControlD, MikroTik, UniFi)
+- **Auto-update scripts:** 2 (MikroTik, UniFi/VyOS)
 - **Platforms supported:** ControlD, MikroTik RouterOS, UniFi USG/UDM, VyOS/EdgeOS
+- **Update frequency:** Configurable (recommended: daily)
 
 ---
 

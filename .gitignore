@@ -42,7 +42,8 @@ wheels/
 .coverage
 htmlcov/
 
-# Generated formats (built by GitHub Actions)
-controld/
-mikrotik/
-unifi/
+# Generated configurations (created by generator scripts)
+# Ignore output files but not the generator scripts themselves
+uk-blocking-hosts.rsc
+uk-blocking-hosts.sh
+uk-blocking-hosts-controld.txt

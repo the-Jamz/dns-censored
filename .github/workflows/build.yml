@@ -1,4 +1,4 @@
-name: Build Blocklists
+name: Validate Domain List
 
 on:
   push:
@@ -12,33 +12,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Build all formats
-        run: python3 build.py
-
-      - name: Check for changes
-        id: verify_diff
+      - name: Validate domain list format
         run: |
-          git diff --quiet controld/ mikrotik/ unifi/ || echo "changed=true" >> $GITHUB_OUTPUT
+          echo "Validating domain list format..."
 
-      - name: Commit and push if changed
-        if: steps.verify_diff.outputs.changed == 'true' && github.event_name == 'push'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add -f controld/ mikrotik/ unifi/
-          git commit -m "Auto-build: Update VPN routing formats [skip ci]"
-          git push
+          # Check file exists
+          if [ ! -f domains/uk-blocking-hosts.txt ]; then
+            echo "Error: domains/uk-blocking-hosts.txt not found"
+            exit 1
+          fi
+
+          # Count domains (non-comment, non-empty lines)
+          domain_count=$(grep -v '^#' domains/uk-blocking-hosts.txt | grep -v '^[[:space:]]*$' | wc -l)
+          echo "Found $domain_count domains"
+
+          # Validate domains contain dots and no spaces
+          invalid_domains=$(grep -v '^#' domains/uk-blocking-hosts.txt | grep -v '^[[:space:]]*$' | grep -v '\.' || true)
+          if [ ! -z "$invalid_domains" ]; then
+            echo "Error: Invalid domains found (must contain a dot):"
+            echo "$invalid_domains"
+            exit 1
+          fi
+
+          # Check for domains with spaces
+          domains_with_spaces=$(grep -v '^#' domains/uk-blocking-hosts.txt | grep -v '^[[:space:]]*$' | grep ' ' || true)
+          if [ ! -z "$domains_with_spaces" ]; then
+            echo "Error: Domains with spaces found:"
+            echo "$domains_with_spaces"
+            exit 1
+          fi
+
+          echo "✓ Domain list validation passed"
+          echo "✓ $domain_count valid domains"
