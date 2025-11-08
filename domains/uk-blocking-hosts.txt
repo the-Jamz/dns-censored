@@ -31,3 +31,9 @@ old.reddit.com
 imgur.com
 s.imgur.com
 
+# Lemmy
+lemmy.zip
+
+# X
+x.com
+api.x.com
