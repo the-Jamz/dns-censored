@@ -1,0 +1,44 @@
+name: Build Blocklists
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'domains/uk-blocking-hosts.txt'
+  pull_request:
+    paths:
+      - 'domains/uk-blocking-hosts.txt'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Build all formats
+        run: python3 build.py
+
+      - name: Check for changes
+        id: verify_diff
+        run: |
+          git diff --quiet controld/ mikrotik/ unifi/ || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changed
+        if: steps.verify_diff.outputs.changed == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -f controld/ mikrotik/ unifi/
+          git commit -m "Auto-build: Update VPN routing formats [skip ci]"
+          git push
