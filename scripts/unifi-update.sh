@@ -36,19 +36,23 @@ fi
 
 echo "UK-Blocking Hosts: Downloaded latest list"
 
+# Verify download succeeded
+if [ ! -s "$TEMP_FILE" ]; then
+    echo "ERROR: Downloaded file is empty" >&2
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
+
 # Source VyOS functions
 source /opt/vyatta/etc/functions/script-template
 
 # Start configuration session
 configure
 
-# Remove existing domain group
-delete firewall group domain-group "$DOMAIN_GROUP_NAME" 2>/dev/null || true
-
-# Create domain group
+# Create domain group if it doesn't exist
 set firewall group domain-group "$DOMAIN_GROUP_NAME" description "UK-blocking hosts (auto-updated)"
 
-# Add domains from file
+# Add domains from file (only new ones)
 added=0
 while IFS= read -r line; do
     # Skip comments and empty lines
