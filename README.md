@@ -2,6 +2,19 @@
 
 A curated list of websites and services that block or restrict access to UK users, formatted for automatic VPN routing on MikroTik, ControlD, and UniFi devices.
 
+---
+
+## ⚠️ **EXPERIMENTAL PROJECT WARNING**
+
+**This project is currently experimental and under active development:**
+
+- ⚠️ **UniFi/VyOS/EdgeOS script is UNTESTED** - The `unifi-update.sh` script has not been tested on real hardware. Use at your own risk and test thoroughly before deploying to production.
+- ⚠️ **Instructions may be incomplete** - Setup and configuration instructions are still being refined and may be missing steps or contain errors.
+
+**Recommendation:** Create configuration backups before running any auto-update scripts. Report issues on GitHub.
+
+---
+
 ## 📋 About
 
 This project maintains a list of domains that have chosen to block, restrict, or significantly limit access from UK IP addresses, typically in response to the UK Online Safety Act and related regulations.
