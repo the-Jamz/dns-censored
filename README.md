@@ -2,6 +2,19 @@
 
 A curated list of websites and services that block or restrict access to UK users, formatted for automatic VPN routing on MikroTik, ControlD, and UniFi devices.
 
+
+---
+
+## ⚠️ **Archived Project**
+
+Please instead check out the very cool project [osatracker](https://osatracker.co.uk/) maintained by someone who has more time than me to develop this.
+
+The project seems to be quickly gaining popularity too which of course helps with a community driven list, and I think splintering the efforts helps nobody.
+
+I've spoken briefly to the creator and have been told that it will be open sourced at a later date. If that does not materialize then I will revive this project.
+
+The RouterOS script in this repo works with the export domain from there dropped in which is also nice: `https://osatracker.co.uk/domains/export?format=newline&include_nsfw=1`.
+
 ---
 
 ## ⚠️ **EXPERIMENTAL PROJECT WARNING**
